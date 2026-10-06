@@ -19,6 +19,11 @@ Optional environment variables:
   sentry-sdk integration classes (instantiated without arguments).
 - ``SENTRY_MAX_LENGTH`` — maps to sentry-sdk's ``max_value_length``;
   unset keeps the SDK default.
+- ``SENTRY_SAMPLE_RATE`` — maps to sentry-sdk's ``sample_rate``, the share
+  of error events sent (``0`` to ``1``); unset keeps the SDK default (all).
+- ``SENTRY_TRACES_SAMPLE_RATE`` — maps to sentry-sdk's
+  ``traces_sample_rate`` (``0`` to ``1``) and so enables tracing for
+  transactions; unset leaves tracing off.
 - ``SENTRY_OPTIONAL`` — deprecated, ignored (a missing DSN just disables
   reporting).
 

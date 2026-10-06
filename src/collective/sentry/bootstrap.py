@@ -23,6 +23,19 @@ def _load_integration(dotted):
         ) from exc
 
 
+def _rate(variable, raw):
+    try:
+        rate = float(raw)
+    except ValueError:
+        rate = None
+    if rate is None or not 0.0 <= rate <= 1.0:
+        raise RuntimeError(
+            f"Environment variable {variable} is malformed "
+            f"(expected a number between 0 and 1): {raw}"
+        )
+    return rate
+
+
 def initialize_from_environ(environ=None):
     """Init the SDK from env vars. Returns False when skipped."""
     environ = os.environ if environ is None else environ
@@ -61,6 +74,13 @@ def initialize_from_environ(environ=None):
                 "Environment variable SENTRY_MAX_LENGTH is malformed "
                 f"(expected an integer): {raw_max_length}"
             ) from exc
+
+    for variable, option in (
+        ("SENTRY_SAMPLE_RATE", "sample_rate"),
+        ("SENTRY_TRACES_SAMPLE_RATE", "traces_sample_rate"),
+    ):
+        if variable in environ:
+            extra_options[option] = _rate(variable, environ[variable])
 
     sentry_sdk.init(
         dsn=dsn,

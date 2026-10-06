@@ -75,6 +75,32 @@ class TestBootstrap(unittest.TestCase):
             self._call(SENTRY_DSN=DSN, SENTRY_MAX_LENGTH="abc")
         self.assertIn("SENTRY_MAX_LENGTH", str(ctx.exception))
 
+    def test_sample_rates_only_when_set(self):
+        self._call(SENTRY_DSN=DSN)
+        options = sentry_sdk.get_client().options
+        default_sample_rate = options["sample_rate"]
+        self.assertIsNone(options["traces_sample_rate"])
+        reset_sentry()
+        self._call(
+            SENTRY_DSN=DSN,
+            SENTRY_SAMPLE_RATE="0.5",
+            SENTRY_TRACES_SAMPLE_RATE="0.25",
+        )
+        options = sentry_sdk.get_client().options
+        self.assertEqual(options["sample_rate"], 0.5)
+        self.assertEqual(options["traces_sample_rate"], 0.25)
+        self.assertNotEqual(default_sample_rate, 0.5)
+
+    def test_malformed_sample_rate_raises_clear_error(self):
+        for value in ("abc", "1.5", "-0.1"):
+            with self.subTest(value=value):
+                with self.assertRaises(RuntimeError) as ctx:
+                    self._call(SENTRY_DSN=DSN, SENTRY_SAMPLE_RATE=value)
+                self.assertIn("SENTRY_SAMPLE_RATE", str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self._call(SENTRY_DSN=DSN, SENTRY_TRACES_SAMPLE_RATE="x")
+        self.assertIn("SENTRY_TRACES_SAMPLE_RATE", str(ctx.exception))
+
     def test_extra_integrations_loaded(self):
         self.assertTrue(
             self._call(

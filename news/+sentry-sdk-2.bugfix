@@ -1,0 +1,2 @@
+Require sentry-sdk below 3.0, which removed APIs this package uses.
+[instification]

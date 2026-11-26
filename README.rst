@@ -28,6 +28,27 @@ module::
 
     import collective.sentry  # noqa: F401
 
+Event limits
+------------
+
+A fault that repeats on every request, or in a loop, can send thousands of
+events a minute and use up a month's Sentry quota. Each process therefore
+sends at most:
+
+- ``SENTRY_MAX_EVENTS_PER_HOUR`` error events an hour (default ``60``),
+  with up to ``SENTRY_MAX_EVENTS_BURST`` at once (default ``20``);
+- ``SENTRY_MAX_EVENTS_PER_ERROR`` events an hour for any one error
+  (default ``10``). An error is the exception type and the line that raised
+  it, or the message template of a logged error.
+
+The counts refill continuously, so after a burst events flow again at the
+hourly rate. ``0`` turns a limit off; set both ``SENTRY_MAX_EVENTS_PER_HOUR``
+and ``SENTRY_MAX_EVENTS_PER_ERROR`` to ``0`` to send everything. Dropped
+events show in Sentry's usage stats as client discards (``event_processor``),
+and the process logs a warning at most every ten minutes while it drops.
+Transactions are not limited. The limits also apply when you call
+``sentry_sdk.init()`` yourself.
+
 Own initialization (filtering etc.)
 -----------------------------------
 

@@ -1,0 +1,2 @@
+Leave ZODB.Connection log errors out of Sentry events: serialising frame variables that hold objects from a closed connection could make them loop.
+[instification]

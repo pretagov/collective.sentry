@@ -51,7 +51,7 @@ setup(
         "Tracker": "https://github.com/collective/collective.sentry/issues",
     },
     zip_safe=False,
-    install_requires=["sentry-sdk>2.27.0", "Zope"],
+    install_requires=["sentry-sdk>2.27.0,<3", "Zope"],
     extras_require={"test": ["plone.app.testing", "plone.testing"]},
     entry_points="""
       # -*- Entry points -*-

@@ -24,6 +24,19 @@ Optional environment variables:
 - ``SENTRY_TRACES_SAMPLE_RATE`` — maps to sentry-sdk's
   ``traces_sample_rate`` (``0`` to ``1``) and so enables tracing for
   transactions; unset leaves tracing off.
+- ``SENTRY_SEND_DEFAULT_PII`` — set to ``1``/``true`` to include
+  identifying request headers (``Authorization``, ``Cookie``,
+  ``Set-Cookie``, ``X-Api-Key``, ``X-Forwarded-For``, ``X-Real-Ip``) in
+  events. Unset or ``0`` filters them, which is the default on both
+  sentry-sdk majors. A malformed value raises at startup rather than
+  guessing: guessing either way would silently leak credentials or
+  silently drop headers an operator asked for.
+
+  On sentry-sdk 2 this overrides the SDK's own ``send_default_pii``
+  option; with the variable unset, that option is still honoured. On
+  sentry-sdk 3 the option no longer exists -- it was replaced by
+  ``data_collection``, whose defaults collect *more* -- so this variable
+  is the only way to opt in, and absence keeps meaning "filter".
 - ``SENTRY_OPTIONAL`` — deprecated, ignored (a missing DSN just disables
   reporting).
 

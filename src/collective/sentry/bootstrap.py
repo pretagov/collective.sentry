@@ -2,8 +2,10 @@
 
 from App.config import getConfiguration
 from collective.sentry.integration import ZopeIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 import importlib
+import inspect
 import logging
 import os
 import sentry_sdk
@@ -36,6 +38,40 @@ def _rate(variable, raw):
     return rate
 
 
+# sentry-sdk 3 renamed the breadcrumb option to `breadcrumb_level` and reused
+# `level` for the Sentry-logs stream, so the parameter's presence identifies
+# the major without parsing a version string.
+_LOGGING_PARAMS = inspect.signature(LoggingIntegration.__init__).parameters
+_SDK3_LOGGING = "breadcrumb_level" in _LOGGING_PARAMS
+
+
+def logging_integration():
+    """LoggingIntegration that behaves the same on sentry-sdk 2 and 3.
+
+    sentry-sdk 3 changed two defaults, and inheriting either by accident is a
+    silent regression:
+
+    - ``event_level`` went from ``ERROR`` to ``None``, so a logged error no
+      longer becomes an event. Every Zope/Plone deployment relies on logged
+      errors reaching Sentry -- Products.SiteErrorLog and any add-on that
+      logs rather than raises -- so losing that is losing error reporting
+      without a single failing test to say so. Restored explicitly.
+    - The Sentry-logs stream was gated off in 2.x by
+      ``capture_sentry_logs=False``. In 3.x that option is gone and ``level``
+      (default ``INFO``) controls it, so it is ON: upgrading would start
+      streaming every INFO line a Plone site emits into a separately metered
+      data category nobody opted into. Turned off, leaving 2.x behaviour.
+
+    Note ``level`` is NOT the same option across the two majors -- it is the
+    breadcrumb level on 2.x and the logs level on 3.x -- so it can only be
+    passed on 3.x. Breadcrumbs keep their default on both.
+    """
+    kwargs = {"event_level": logging.ERROR}
+    if _SDK3_LOGGING:
+        kwargs["level"] = None
+    return LoggingIntegration(**kwargs)
+
+
 def initialize_from_environ(environ=None):
     """Init the SDK from env vars. Returns False when skipped."""
     environ = os.environ if environ is None else environ
@@ -59,7 +95,8 @@ def initialize_from_environ(environ=None):
         logger.info("SENTRY_DSN not set, Sentry reporting disabled")
         return False
 
-    integrations = [ZopeIntegration()]
+    # Ours first, so an explicit SENTRY_INTEGRATIONS entry can replace it.
+    integrations = [ZopeIntegration(), logging_integration()]
     raw = environ.get("SENTRY_INTEGRATIONS", "")
     for dotted in filter(None, (part.strip() for part in raw.split(","))):
         integrations.append(_load_integration(dotted)())

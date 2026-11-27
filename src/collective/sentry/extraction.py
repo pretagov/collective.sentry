@@ -2,7 +2,7 @@
 
 from AccessControl.SecurityManagement import getSecurityManager
 from AccessControl.users import nobody
-from sentry_sdk.scope import should_send_default_pii
+from collective.sentry.pii import should_send_pii
 from zope.globalrequest import getRequest
 from ZPublisher.HTTPRequest import _filterPasswordFields
 
@@ -52,7 +52,7 @@ def _get_other(request):
 def _get_request_info(request):
     environ = request.environ
     headers = {}
-    filter_sensitive = not should_send_default_pii()
+    filter_sensitive = not should_send_pii()
     for key, value in environ.items():
         if key.startswith("HTTP_"):
             name = key[5:].replace("_", "-").title()

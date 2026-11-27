@@ -151,9 +151,19 @@ class TestInstallFromEnviron(unittest.TestCase):
 
     def test_caps_a_logging_storm(self):
         # One error logged in a loop, as a fault on every request would.
+        #
+        # Inits with the package's own logging configuration rather than the
+        # raw SDK defaults, because that is what bootstrap installs. On
+        # sentry-sdk 3 the default event_level is None, so the bare defaults
+        # turn a logged error into no event at all and this would measure an
+        # empty pipeline instead of the cap.
+        from collective.sentry.bootstrap import logging_integration
+
         transport = CapturingTransport()
         self._install(SENTRY_MAX_EVENTS_PER_ERROR="5")
-        sentry_sdk.init(dsn=DSN, transport=transport)
+        sentry_sdk.init(
+            dsn=DSN, transport=transport, integrations=[logging_integration()]
+        )
         log = logging.getLogger("collective.sentry.tests.storm")
         for _ in range(200):
             try:

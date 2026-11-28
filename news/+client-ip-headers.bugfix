@@ -1,0 +1,15 @@
+Filter the client IP under every proxy's own header name, not just
+``X-Forwarded-For``. ``SENSITIVE_HEADERS`` listed ``X-Forwarded-For`` and
+``X-Real-Ip``, so behind a proxy that names its own header -- Fly.io's
+``Fly-Client-Ip``, Cloudflare's ``CF-Connecting-IP``, Akamai's
+``True-Client-Ip`` -- the visitor's real address was sent to Sentry verbatim,
+directly beside a ``[Filtered]`` ``X-Forwarded-For`` in the same event, while
+``should_send_pii()`` was closed. An IP address is identifying data, and the
+point of that default is that an operator who has configured nothing does not
+ship it. Found in production on Fly; pre-existing, not a sentry-sdk 3
+regression.
+
+Entries must be spelled as the ``key[5:].replace("_", "-").title()`` transform
+produces them (``Cf-Connecting-Ip``, not the vendor's ``CF-Connecting-IP``), or
+they can never match while still looking correct, so a new test asserts every
+name in the set round trips through that transform.

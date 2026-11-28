@@ -8,12 +8,33 @@ from ZPublisher.HTTPRequest import _filterPasswordFields
 
 # Header names as produced by the key[5:].replace("_", "-").title()
 # transform below; filtered out unless PII sending is explicitly enabled.
+#
+# Spell each entry the way that transform produces it, NOT the way the vendor
+# documents it: Cloudflare writes "CF-Connecting-IP", the transform yields
+# "Cf-Connecting-Ip", and an entry spelled the vendor's way can never match,
+# so it would filter nothing while looking correct. The transform also
+# uppercases and title-cases, so case variation from the proxy needs no
+# handling here -- but a misspelled entry is invisible, which is why
+# test_sensitive_header_names_match_the_transform asserts every name round
+# trips.
+#
+# The client-IP group is listed per proxy because each vendor named its own,
+# and a visitor's IP address is identifying data that must not be sent while
+# PII is closed. Listing only X-Forwarded-For left the real address published
+# verbatim under the platform's own header, directly beside a filtered
+# X-Forwarded-For in the same event (found in production on Fly).
 SENSITIVE_HEADERS = frozenset(
     {
         "Authorization",
         "Cookie",
         "Set-Cookie",
         "X-Api-Key",
+        # Client IP, by proxy vendor.
+        "Cf-Connecting-Ip",  # Cloudflare
+        "Fly-Client-Ip",  # Fly.io
+        "True-Client-Ip",  # Akamai, Cloudflare Enterprise
+        "X-Client-Ip",
+        "X-Cluster-Client-Ip",
         "X-Forwarded-For",
         "X-Real-Ip",
     }

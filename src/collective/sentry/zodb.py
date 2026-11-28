@@ -11,13 +11,7 @@ ZODB raises after everything it logs on this logger, so the error is still
 reported once, by the publisher.
 """
 
-try:
-    # sentry-sdk 3: ignore_logger only covers Sentry Logs.
-    from sentry_sdk.integrations.logging import ignore_logger_for_events
-except ImportError:  # sentry-sdk 2
-    from sentry_sdk.integrations.logging import (
-        ignore_logger as ignore_logger_for_events,
-    )
+from collective.sentry.logging_compat import ignore_logger_for_events
 
 LOGGER = "ZODB.Connection"
 

@@ -1,0 +1,2 @@
+Keep ``Zope.SiteErrorLog`` out of events on sentry-sdk 3 as well, so a publisher failure is reported once and not twice. ``ignore_logger`` still exists on 3.x but only silences Sentry Logs, so the call kept running and quietly stopped working; the choice now lives in one module, ``logging_compat``, shared with the ``ZODB.Connection`` guard.
+[instification]

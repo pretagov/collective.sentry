@@ -57,6 +57,52 @@ class TestSections(unittest.TestCase):
         self.assertEqual(info["headers"]["Cookie"], "[Filtered]")
         self.assertEqual(info["headers"]["User-Agent"], "UA")
 
+    def test_request_info_filters_every_client_ip_header(self):
+        # The leak this closes: SENSITIVE_HEADERS listed X-Forwarded-For and
+        # X-Real-Ip but not the header the PLATFORM sets, so behind Fly the
+        # visitor's IP was published verbatim next to a filtered
+        # X-Forwarded-For in the same event. Found in production, where the
+        # two adjacent values made the gap unambiguous.
+        #
+        # Enumerated per-proxy rather than guessed, because each vendor named
+        # its own: the next platform's variant should fail HERE, not in Sentry.
+        from collective.sentry.extraction import _get_request_info
+
+        bearers = {
+            "HTTP_FLY_CLIENT_IP": "Fly-Client-Ip",  # Fly.io
+            "HTTP_CF_CONNECTING_IP": "Cf-Connecting-Ip",  # Cloudflare
+            "HTTP_TRUE_CLIENT_IP": "True-Client-Ip",  # Akamai, CF Enterprise
+            "HTTP_X_CLUSTER_CLIENT_IP": "X-Cluster-Client-Ip",  # some LBs
+            "HTTP_X_FORWARDED_FOR": "X-Forwarded-For",
+            "HTTP_X_REAL_IP": "X-Real-Ip",
+        }
+        environ = {"REMOTE_ADDR": "10.0.0.1", "HTTP_USER_AGENT": "UA"}
+        for key in bearers:
+            environ[key] = "203.0.113.7"
+        info = _get_request_info(FakeRequest(environ=environ))
+        for key, name in bearers.items():
+            self.assertEqual(
+                info["headers"][name], "[Filtered]", f"{name} ({key}) leaked"
+            )
+        # An address must not survive anywhere in the section.
+        self.assertNotIn("203.0.113.7", str(info))
+        self.assertEqual(info["headers"]["User-Agent"], "UA")
+
+    def test_sensitive_header_names_match_the_transform(self):
+        # Every entry must be spelled as the key[5:].replace("_", "-").title()
+        # transform produces it, or it silently never matches. This is the
+        # trap: the vendor writes "CF-Connecting-IP", the transform yields
+        # "Cf-Connecting-Ip", and an exact-match set quietly filters nothing.
+        from collective.sentry.extraction import SENSITIVE_HEADERS
+
+        for name in SENSITIVE_HEADERS:
+            key = "HTTP_" + name.upper().replace("-", "_")
+            self.assertEqual(
+                key[5:].replace("_", "-").title(),
+                name,
+                f"{name!r} can never match a real header name",
+            )
+
     def test_request_info_sends_sensitive_headers_when_opted_in(self):
         # The other side of the switch, which had no coverage at all: only the
         # filtered path was tested, so a port that accidentally hard-wired

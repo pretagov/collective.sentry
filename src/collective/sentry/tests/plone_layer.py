@@ -1,5 +1,6 @@
 """plone.app.testing layer with a capturing Sentry client."""
 
+from collective.sentry.bootstrap import logging_integration
 from collective.sentry.integration import ZopeIntegration
 from collective.sentry.tests.utils import CapturingTransport
 from collective.sentry.tests.utils import reset_sentry
@@ -22,7 +23,12 @@ class SentryLayer(PloneSandboxLayer):
         sentry_sdk.init(
             dsn="https://x@example.com/1",
             transport=self["sentry_transport"],
-            integrations=[ZopeIntegration()],
+            # The same integrations bootstrap installs. With the SDK's
+            # default LoggingIntegration instead, sentry-sdk 3's
+            # event_level=None default means a logged error produces no
+            # event, so the logging-path tests would measure an empty
+            # pipeline rather than the behaviour this package promises.
+            integrations=[ZopeIntegration(), logging_integration()],
         )
 
     def tearDownZope(self, app):

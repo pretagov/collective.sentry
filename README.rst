@@ -24,6 +24,30 @@ Optional environment variables:
 - ``SENTRY_TRACES_SAMPLE_RATE`` — maps to sentry-sdk's
   ``traces_sample_rate`` (``0`` to ``1``) and so enables tracing for
   transactions; unset leaves tracing off.
+- ``SENTRY_SEND_DEFAULT_PII`` — set to ``1``/``true`` to include
+  identifying request headers (``Authorization``, ``Cookie``,
+  ``Set-Cookie``, ``X-Api-Key``, ``X-Forwarded-For``, ``X-Real-Ip``) in
+  events. Unset or ``0`` filters them, which is the default on both
+  sentry-sdk majors. A malformed value raises at startup rather than
+  guessing: guessing either way would silently leak credentials or
+  silently drop headers an operator asked for.
+
+  On sentry-sdk 2 this overrides the SDK's own ``send_default_pii``
+  option; with the variable unset, that option is still honoured. On
+  sentry-sdk 3 the option no longer exists -- it was replaced by
+  ``data_collection``, whose defaults collect *more* -- so this variable
+  is the only way to opt in, and absence keeps meaning "filter".
+
+  It governs what *this package* puts in an event, which is all of the
+  request data an ordinary install sends: no sentry-sdk integration that
+  reads ``data_collection`` is enabled by default here, so 3.x's wider
+  defaults have nothing to widen. Enabling a framework, database or
+  outgoing-HTTP integration through ``SENTRY_INTEGRATIONS`` changes that
+  -- on sentry-sdk 3 such an integration collects headers, cookies, query
+  parameters and request bodies unless denied, where the same integration
+  on 2.x stayed quiet under ``send_default_pii=False``. Configure
+  ``data_collection`` yourself (through your own ``sentry_sdk.init()``,
+  which this package yields to) if you enable one.
 - ``SENTRY_OPTIONAL`` — deprecated, ignored (a missing DSN just disables
   reporting).
 

@@ -52,10 +52,34 @@ class TestSections(unittest.TestCase):
             }
         )
         info = _get_request_info(req)
-        # No active client -> should_send_default_pii() is False by default.
+        # Nothing configured -> PII stays closed, on either sentry-sdk major.
         self.assertEqual(info["headers"]["Authorization"], "[Filtered]")
         self.assertEqual(info["headers"]["Cookie"], "[Filtered]")
         self.assertEqual(info["headers"]["User-Agent"], "UA")
+
+    def test_request_info_sends_sensitive_headers_when_opted_in(self):
+        # The other side of the switch, which had no coverage at all: only the
+        # filtered path was tested, so a port that accidentally hard-wired
+        # filtering ON would have stayed green.
+        from collective.sentry.extraction import _get_request_info
+
+        import collective.sentry.extraction as extraction
+
+        req = FakeRequest(
+            environ={
+                "REMOTE_ADDR": "10.0.0.1",
+                "HTTP_AUTHORIZATION": "Basic dXNlcjpwYXNz",
+                "HTTP_COOKIE": "__ac=secret",
+            }
+        )
+        original = extraction.should_send_pii
+        extraction.should_send_pii = lambda environ=None: True
+        try:
+            info = _get_request_info(req)
+        finally:
+            extraction.should_send_pii = original
+        self.assertEqual(info["headers"]["Authorization"], "Basic dXNlcjpwYXNz")
+        self.assertEqual(info["headers"]["Cookie"], "__ac=secret")
 
     def test_safe_isolates_section_failure(self):
         from collective.sentry.extraction import _get_form

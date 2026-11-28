@@ -20,6 +20,18 @@ check_manifest_ignores = """
     "SPEC-*.md",
 """
 
+[pre_commit]
+# zpretty parses through lxml, and lxml 6 broke its namespace handling: with
+# lxml 6.2.0 `zpretty --inplace` rewrites `<configure xmlns=...>` to
+# `<configure>` and `<browser:page>` to `<page>`, which is not a reformat but
+# a broken ZCML file. It surfaced as a QA failure on an unrelated commit
+# because the hook environment is cached: the tree never changed, the
+# resolved lxml did. Reported upstream; drop this when zpretty handles lxml 6.
+zpretty_extra_lines = """
+        additional_dependencies:
+        -   "lxml<6"
+"""
+
 [tox]
 test_matrix = {"6.2" = ["*"]}
 test_environment_variables = """
@@ -39,5 +51,5 @@ deps =
     zope.testrunner
     Products.SiteErrorLog
 commands =
-    zope-testrunner --test-path={toxinidir}/src -s collective.sentry -m 'collective\\.sentry\\.tests\\.(test_extraction|test_capture|test_integration|test_bootstrap|test_bbb|test_ratelimit|test_zodb)' {posargs}
+    zope-testrunner --test-path={toxinidir}/src -s collective.sentry -m 'collective\\.sentry\\.tests\\.(test_extraction|test_capture|test_integration|test_bootstrap|test_bbb|test_ratelimit|test_zodb|test_pii)' {posargs}
 """

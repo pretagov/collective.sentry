@@ -1,0 +1,8 @@
+Pin the two ``LoggingIntegration`` defaults that sentry-sdk 3 changed, both of
+which regress silently. ``event_level`` went from ``ERROR`` to ``None``, which
+would stop every error a Zope/Plone deployment *logs* rather than raises --
+Products.SiteErrorLog included -- from becoming an event; and the Sentry-logs
+stream, gated off in 2.x by ``capture_sentry_logs=False``, is now controlled by
+``level`` (default ``INFO``) and so would start streaming every INFO line into a
+separately metered data category. Behaviour on sentry-sdk 2 is unchanged.
+[instification]

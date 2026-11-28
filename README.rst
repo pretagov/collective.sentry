@@ -37,6 +37,17 @@ Optional environment variables:
   sentry-sdk 3 the option no longer exists -- it was replaced by
   ``data_collection``, whose defaults collect *more* -- so this variable
   is the only way to opt in, and absence keeps meaning "filter".
+
+  It governs what *this package* puts in an event, which is all of the
+  request data an ordinary install sends: no sentry-sdk integration that
+  reads ``data_collection`` is enabled by default here, so 3.x's wider
+  defaults have nothing to widen. Enabling a framework, database or
+  outgoing-HTTP integration through ``SENTRY_INTEGRATIONS`` changes that
+  -- on sentry-sdk 3 such an integration collects headers, cookies, query
+  parameters and request bodies unless denied, where the same integration
+  on 2.x stayed quiet under ``send_default_pii=False``. Configure
+  ``data_collection`` yourself (through your own ``sentry_sdk.init()``,
+  which this package yields to) if you enable one.
 - ``SENTRY_OPTIONAL`` — deprecated, ignored (a missing DSN just disables
   reporting).
 

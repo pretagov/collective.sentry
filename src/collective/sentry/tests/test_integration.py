@@ -119,10 +119,19 @@ class TestSiteErrorLogIsNotReportedTwice(unittest.TestCase):
 
     def setUp(self):
         reset_sentry()
+        # setup_once() wraps WSGIPublisher.transaction_pubevents and marks it
+        # _sentry_wrapped. Leaving the wrapper in place makes every later
+        # setup_once() in this process return early -- and that early return
+        # also skips registering the IPubFailure handler, so the Plone
+        # functional layer, which runs after the unit tests in the same
+        # testrunner process, would capture nothing at all. Restoring it is
+        # what TestSetupOnce above does, for the same reason.
+        self._orig_pubevents = WSGIPublisher.transaction_pubevents
 
     def tearDown(self):
         from collective.sentry.capture import on_pub_failure
 
+        WSGIPublisher.transaction_pubevents = self._orig_pubevents
         getGlobalSiteManager().unregisterHandler(on_pub_failure, (IPubFailure,))
         reset_sentry()
 
